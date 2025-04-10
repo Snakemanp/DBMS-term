@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sql_parser.h"
+#include <math.h>
 
 // ASTNode* parse_tree = NULL;
 extern FILE *yyin;
@@ -127,4 +128,322 @@ void read_table_data()
     }
 
     printf("------------------------------------------------------------------------------------------------------------------------\n\n");
+}
+
+void free_scope(scope_attr *scope)
+{
+    scope_attr *current = scope;
+    while (current != NULL)
+    {
+        scope_attr *next = current->next;
+        free(current->name);
+        free(current->alias);
+        free(current);
+        current = next;
+    }
+}
+
+float estimate_selectivity(ASTNode *cond)
+{
+    if (!cond)
+        return 1.0f;
+
+    switch (cond->type)
+    {
+    case RA_AND:
+    {
+        float left = estimate_selectivity(cond->left);
+        float right = estimate_selectivity(cond->right);
+        return left * right;
+    }
+    case RA_OR:
+    {
+        float left = estimate_selectivity(cond->left);
+        float right = estimate_selectivity(cond->right);
+        return left + right - (left * right);
+    }
+    case RA_COMPARISON:
+    {
+        if (!cond->left || cond->left->type != RA_ATTRIBUTE)
+            return 0.5f;
+
+        // Try to guess selectivity based on operator
+        const char *op = cond->value;
+        if (strcmp(op, "=") == 0)
+            return 0.1f;
+        if (strcmp(op, "!=") == 0)
+            return 0.9f;
+        if (strcmp(op, "<") == 0 || strcmp(op, ">") == 0 ||
+            strcmp(op, "<=") == 0 || strcmp(op, ">=") == 0)
+            return 0.33f;
+
+        return 0.5f; // fallback
+    }
+    default:
+        return 0.5f;
+    }
+}
+
+float estimate_join_selectivity(ASTNode *condition, scope_attr *left_scope, scope_attr *right_scope)
+{
+    if (!condition || condition->type != RA_COMPARISON)
+        return 1.0f; // Default for non-comparisons
+
+    // Expecting form: A = B
+    if (strcmp(condition->value, "=") != 0)
+        return 0.1f;
+
+    ASTNode *left_attr = condition->left;
+    ASTNode *right_attr = condition->right;
+
+    if (!left_attr || !right_attr || left_attr->type != RA_ATTRIBUTE || right_attr->type != RA_ATTRIBUTE)
+        return 0.1f;
+
+    // Parse aliases and attribute names
+    char alias1[256], name1[256], alias2[256], name2[256];
+    sscanf(left_attr->value, "%[^.].%s", alias1, name1);
+    sscanf(right_attr->value, "%[^.].%s", alias2, name2);
+
+    int distinct1 = 1000; // fallback
+    int distinct2 = 1000;
+
+    // Search left scope
+    for (scope_attr *s = left_scope; s; s = s->next)
+    {
+        if (strcmp(s->alias, alias1) == 0 && strcmp(s->name, name1) == 0 && s->tablename != NULL)
+        {
+            for (int i = 0; i < s->tablename->num_attributes; i++)
+            {
+                if (strcmp(s->tablename->attr_list[i].name, name1) == 0)
+                {
+                    distinct1 = s->tablename->attr_list[i].max_len; // you may rename to 'distinct_count'
+                    break;
+                }
+            }
+        }
+    }
+
+    // Search right scope
+    for (scope_attr *s = right_scope; s; s = s->next)
+    {
+        if (strcmp(s->alias, alias2) == 0 && strcmp(s->name, name2) == 0 && s->tablename != NULL)
+        {
+            for (int i = 0; i < s->tablename->num_attributes; i++)
+            {
+                if (strcmp(s->tablename->attr_list[i].name, name2) == 0)
+                {
+                    distinct2 = s->tablename->attr_list[i].max_len;
+                    break;
+                }
+            }
+        }
+    }
+
+    int max_distinct = (distinct1 > distinct2) ? distinct1 : distinct2;
+    if (max_distinct == 0)
+        max_distinct = 1000; // avoid div-by-zero
+
+    float sel = 1.0f / max_distinct;
+    return sel;
+}
+
+int estimate_selection_cost(ASTNode *condition, scope_attr *scope)
+{
+    if (!condition)
+        return 0;
+
+    float sel = estimate_selectivity(condition);
+    printf("Slectivity: %f\n", sel);
+    int cost = 0;
+
+    // Extract attributes used in condition
+    ASTNode *attr_list = extract_attributes_from_conditions(condition);
+
+    for (ASTNode *curr = attr_list; curr; curr = curr->args)
+    {
+        if (!curr || curr->type != RA_ATTRIBUTE)
+            continue;
+
+        char *attr_str = curr->value;
+        char alias[256], attr_name[256];
+        char *dot = strchr(attr_str, '.');
+
+        if (dot)
+        {
+            int len = dot - attr_str;
+            strncpy(alias, attr_str, len);
+            alias[len] = '\0';
+            strcpy(attr_name, dot + 1);
+        }
+        else
+        {
+            strcpy(alias, "");
+            strcpy(attr_name, attr_str);
+        }
+
+        // Resolve attribute in scope
+        TABLE *table = NULL;
+        int table_size = 1000; // default
+        int indexed = 0;
+        int found_count = 0;
+
+        for (scope_attr *s = scope; s; s = s->next)
+        {
+            if ((strcmp(alias, "") == 0 && strcmp(s->name, attr_name) == 0) ||
+                (strcmp(s->alias, alias) == 0 && strcmp(s->name, attr_name) == 0))
+            {
+                table = s->tablename;
+                if (!table)
+                    continue;
+
+                found_count++;
+
+                table_size = table->num_tuples;
+
+                for (int i = 0; i < table->num_attributes; i++)
+                {
+                    if (strcmp(table->attr_list[i].name, attr_name) == 0)
+                    {
+                        indexed = table->attr_list[i].flag;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (!table || found_count > 1)
+        {
+            continue; // ambiguous or not found
+        }
+
+        // Calculate cost
+        if (indexed)
+        {
+            cost += (int)(log2(table_size) + table_size * sel);
+        }
+        else
+        {
+            cost += (int)(table_size * (sel + 1));
+        }
+    }
+
+    free_tree(attr_list);
+    return cost;
+}
+
+int estimate_width(scope_attr *scope)
+{
+    int count = 0;
+    for (scope_attr *s = scope; s; s = s->next)
+        count++;
+    return count;
+}
+
+int estimate_cardinality(ASTNode *node)
+{
+    if (!node)
+        return 0;
+
+    switch (node->type)
+    {
+    case RA_RELATION:
+    case RA_ALIAS:
+    {
+        const char *table_name = (node->type == RA_ALIAS && node->left)
+                                     ? node->left->value
+                                     : node->value;
+        for (int i = 0; i < num_tables; ++i)
+        {
+            if (strcmp(tables[i].TABLE_NAME, table_name) == 0)
+                return tables[i].num_tuples;
+        }
+        return 1000; // default/fallback
+    }
+
+    case RA_SELECTION:
+        return (int)(estimate_cardinality(node->left) * estimate_selectivity(node->args));
+
+    case RA_PROJECTION:
+    case RA_DISTINCT:
+        return estimate_cardinality(node->left); // no change in cardinality assumed
+
+    case RA_JOIN:
+    {
+        int left = estimate_cardinality(node->left);
+        int right = estimate_cardinality(node->right);
+
+        scope_attr *left_scope = build_scope(node->left);
+        scope_attr *right_scope = build_scope(node->right);
+
+        float sel = estimate_join_selectivity(node->condition, left_scope, right_scope);
+
+        free_scope(left_scope);
+        free_scope(right_scope);
+
+        return (int)(left * right * sel);
+    }
+
+    case RA_GROUPBY:
+    case RA_ORDERBY:
+        return estimate_cardinality(node->left); // group/order doesn’t change size for now
+
+    default:
+        return estimate_cardinality(node->left); // fallback recursive
+    }
+}
+
+int cost_estimation(ASTNode *node)
+{
+    if (node == NULL)
+        return 0;
+
+    int cost = 0;
+
+    switch (node->type)
+    {
+    case RA_SELECTION:
+    {
+        scope_attr *scope = build_scope(node);
+        int sel_cost = estimate_selection_cost(node->args, scope);
+        free_scope(scope);
+        cost += sel_cost;
+        break; // DO NOT return early
+    }
+
+    case RA_JOIN:
+    {
+        int left_rows = estimate_cardinality(node->left);
+        int right_rows = estimate_cardinality(node->right);
+
+        scope_attr *left_scope = build_scope(node->left);
+        scope_attr *right_scope = build_scope(node->right);
+
+        int width_left = estimate_width(left_scope);
+        int width_right = estimate_width(right_scope);
+
+        float join_sel = estimate_join_selectivity(node->condition, left_scope, right_scope);
+
+        free_scope(left_scope);
+        free_scope(right_scope);
+
+        int join_output = (int)(left_rows * right_rows * join_sel);
+
+        int join_cost = (left_rows * width_left) + (right_rows * width_right) + join_output * (width_left + width_right);
+
+        cost += cost_estimation(node->left);
+        cost += cost_estimation(node->right);
+
+        // Step 5: Return total
+        return cost + join_cost;
+    }
+
+    default:
+        break;
+    }
+
+    // Continue recursion
+    cost += cost_estimation(node->left);
+    cost += cost_estimation(node->right);
+    return cost;
 }

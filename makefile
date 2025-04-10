@@ -4,7 +4,7 @@ CFLAGS = -Wall -g
 run: 
 	yacc -d -Wcounterexamples parser.y
 	lex lexer.l
-	gcc lex.yy.c y.tab.c main.c -o sql_parser
+	gcc lex.yy.c y.tab.c main.c -o sql_parser -lm
 	./sql_parser select.sql
 
 y.tab.c y.tab.h: a.y

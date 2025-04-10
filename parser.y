@@ -95,14 +95,19 @@ statement_list
 statement
     : query SEMICOLON
     {
-        parse_tree[parse_tree_count] = $1;
+        $$ = create_node(RA_SCOPE,NULL);
+        $$->left = $1;
+        parse_tree[parse_tree_count] = $$;
         parse_tree_count++;
         printf("\nOriginal Relational Algebra Tree for sql statement %d:\n",parse_tree_count);
         print_tree($1, 0);
+
+        printf("Cost of actual tree: %d\n",cost_estimation($1));
         
-        ASTNode* transformed_both = apply_transformations(deep_copy_tree($1));
+        ASTNode* transformed_both = apply_transformations(deep_copy_tree($$));
         printf("\nTree after Transformations:\n");
         print_tree(transformed_both, 0);
+        printf("Cost of transformed tree: %d\n",cost_estimation(transformed_both));
     }
     ;
 
@@ -266,7 +271,8 @@ with_query
     : ID AS LPAREN query RPAREN 
     {
         $$ = create_node(RA_ALIAS, $1);
-        $$->left = $4;
+        $$->left = create_node(RA_SCOPE,NULL);
+        $$->left->left = $4;
     }
     ;
 
@@ -403,10 +409,11 @@ from_item
         if ($4->type != RA_EMPTY) {
             // Handle table alias
             ASTNode* alias = create_node(RA_ALIAS, $4->value);
-            alias->left = create_node(RA_RELATION, $2->value);
+            alias->left = create_node(RA_SCOPE, NULL);
+            alias->left->left = $2;
             $$ = alias;
         } else {
-            $$ = create_node(RA_RELATION, $2->value);
+            $$ = create_node(RA_SCOPE, NULL);
             $$->left = $2;
         }
     }
@@ -1142,6 +1149,147 @@ ASTNode* create_node(NodeType type, const char* value) {
     return node;
 }
 
+scope_attr* merge_scopes(scope_attr* left, scope_attr* right) {
+    scope_attr* merged = NULL;
+    scope_attr* tail = NULL;
+
+    for (scope_attr* curr = left; curr; curr = curr->next) {
+        scope_attr* sa = (scope_attr*)malloc(sizeof(scope_attr));
+        sa->name = strdup(curr->name);
+        sa->alias = strdup(curr->alias);
+        sa->tablename = curr->tablename;
+        sa->next = NULL;
+
+        if (!merged) merged = tail = sa;
+        else { tail->next = sa; tail = sa; }
+    }
+
+    for (scope_attr* curr = right; curr; curr = curr->next) {
+        scope_attr* sa = (scope_attr*)malloc(sizeof(scope_attr));
+        sa->name = strdup(curr->name);
+        sa->alias = strdup(curr->alias);
+        sa->tablename = curr->tablename;
+        sa->next = NULL;
+
+        if (!merged) merged = tail = sa;
+        else { tail->next = sa; tail = sa; }
+    }
+
+    return merged;
+}
+
+
+scope_attr* build_scope(ASTNode* node) {
+    if (!node) return NULL;
+
+    switch (node->type) {
+        case RA_RELATION:
+        case RA_ALIAS: {
+            const char* table_name = NULL;
+            const char* alias = NULL;
+
+            if (node->type == RA_ALIAS && node->left) {
+                table_name = node->left->value;
+                alias = node->value;
+            } else {
+                table_name = alias = node->value;
+            }
+
+            // Find table in global tables[]
+            TABLE* table = NULL;
+            for (int i = 0; i < num_tables; ++i) {
+                if (strcmp(tables[i].TABLE_NAME, table_name) == 0) {
+                    table = &tables[i];
+                    break;
+                }
+            }
+
+            if (!table) return NULL;
+
+            // Build scope_attr list
+            scope_attr* head = NULL;
+            scope_attr* tail = NULL;
+
+            for (int i = 0; i < table->num_attributes; ++i) {
+                scope_attr* sa = (scope_attr*)malloc(sizeof(scope_attr));
+                sa->name = strdup(table->attr_list[i].name);
+                sa->alias = strdup(alias);
+                sa->tablename = table;
+                sa->next = NULL;
+
+                if (!head) head = tail = sa;
+                else { tail->next = sa; tail = sa; }
+            }
+
+            return head;
+        }
+
+        case RA_PROJECTION: {
+            scope_attr* base_scope = build_scope(node->left); // 🔑 get full alias→table mapping
+
+            scope_attr* head = NULL;
+            scope_attr* tail = NULL;
+
+            for (ASTNode* curr = node->args; curr; curr = curr->args) {
+                if (curr->type == RA_ATTRIBUTE) {
+                    char* dot = strchr(curr->value, '.');
+                    char alias_buf[256], name_buf[256];
+
+                    if (dot) {
+                        int len = dot - curr->value;
+                        strncpy(alias_buf, curr->value, len);
+                        alias_buf[len] = '\0';
+                        strcpy(name_buf, dot + 1);
+                    } else {
+                        strcpy(alias_buf, "");
+                        strcpy(name_buf, curr->value);
+                    }
+
+                    // 🧠 Try to find the matching attribute in base scope
+                    TABLE* matched_table = NULL;
+                    for (scope_attr* s = base_scope; s; s = s->next) {
+                        if ((strcmp(alias_buf, "") == 0 || strcmp(s->alias, alias_buf) == 0) &&
+                            strcmp(s->name, name_buf) == 0) {
+                            matched_table = s->tablename;
+                            break;
+                        }
+                    }
+
+                    scope_attr* sa = (scope_attr*)malloc(sizeof(scope_attr));
+                    sa->alias = strdup(alias_buf);
+                    sa->name = strdup(name_buf);
+                    sa->tablename = matched_table; // ✅ copied from matched scope
+                    sa->next = NULL;
+
+                    if (!head) head = tail = sa;
+                    else { tail->next = sa; tail = sa; }
+                }
+            }
+
+            free_scope(base_scope); // clean up base scope after using
+            return head;
+        }
+
+
+        case RA_SELECTION:
+        case RA_DISTINCT:
+        case RA_GROUPBY:
+        case RA_ORDERBY:
+            return build_scope(node->left);
+
+        case RA_JOIN:
+        case RA_CROSS_JOIN: {
+            scope_attr* left = build_scope(node->left);
+            scope_attr* right = build_scope(node->right);
+            return merge_scopes(left, right);
+        }
+
+        default:
+            return build_scope(node->left);
+    }
+}
+
+
 void print_subtree(ASTNode* node, int depth) {
     if (!node) return;
 
@@ -1200,38 +1348,192 @@ ASTNode* selection_pushdown(ASTNode* node) {
     return node;
 }
 
-ASTNode* projection_pushdown(ASTNode* node) {
-    if (!node) return NULL;
+int attribute_in_list(ASTNode* list, const char* attr) {
+    for (ASTNode* curr = list; curr; curr = curr->args) {
+        if (strcmp(curr->value, attr) == 0)
+            return 1;
+    }
+    return 0;
+}
 
-    if (node->type == RA_PROJECTION && node->left && node->left->type == RA_JOIN) {
-        ASTNode* join_node = node->left;
-        ASTNode* projection_attrs = node->args;
+ASTNode* merge_attribute_lists(ASTNode* list1, ASTNode* list2) {
+    ASTNode* merged = NULL;
+    ASTNode* tail = NULL;
 
-        // Extract attributes relevant to the left and right relations
-        ASTNode* left_attrs = extract_attributes(projection_attrs, join_node->left);
-        ASTNode* right_attrs = extract_attributes(projection_attrs, join_node->right);
-
-        // Create projection nodes for the left and right subtrees
-        ASTNode* new_left = create_node(RA_PROJECTION, "π");
-        new_left->args = left_attrs;
-        new_left->left = deep_copy_tree(join_node->left);
-
-        ASTNode* new_right = create_node(RA_PROJECTION, "π");
-        new_right->args = right_attrs;
-        new_right->left = deep_copy_tree(join_node->right);
-
-        // Create a new join node with the projected subtrees
-        ASTNode* new_join = create_node(RA_JOIN, join_node->value);
-        new_join->left = new_left;
-        new_join->right = new_right;
-        new_join->condition = deep_copy_tree(join_node->condition);
-        
-        return new_join;
+    for (ASTNode* curr = list1; curr; curr = curr->args) {
+        ASTNode* node = deep_copy_tree(curr);
+        node->args = NULL;
+        if (!merged) merged = tail = node;
+        else { tail->args = node; tail = node; }
     }
 
-    // Recursively apply projection pushdown to children
+    for (ASTNode* curr = list2; curr; curr = curr->args) {
+        if (!attribute_in_list(merged, curr->value)) {
+            ASTNode* node = deep_copy_tree(curr);
+            node->args = NULL;
+            if (!merged) merged = tail = node;
+            else { tail->args = node; tail = node; }
+        }
+    }
+
+    return merged;
+}
+
+ASTNode* extract_attributes_from_conditions(ASTNode* node) {
+    if (!node) return NULL;
+
+    ASTNode* result = NULL;
+
+    if (node->type == RA_ATTRIBUTE) {
+        ASTNode* copy = deep_copy_tree(node);
+        copy->args = NULL;
+        result = copy;
+    } else {
+        ASTNode* left_attrs = extract_attributes_from_conditions(node->left);
+        ASTNode* right_attrs = extract_attributes_from_conditions(node->right);
+        ASTNode* cond_attrs = extract_attributes_from_conditions(node->condition);
+        ASTNode* args_attrs = extract_attributes_from_conditions(node->args);
+
+        result = merge_attribute_lists(left_attrs, right_attrs);
+        result = merge_attribute_lists(result, cond_attrs);
+        result = merge_attribute_lists(result, args_attrs);
+    }
+
+    return result;
+}
+
+
+ASTNode *projection_pushdown(ASTNode *node) {
+    if (!node) return NULL;
+
     node->left = projection_pushdown(node->left);
     node->right = projection_pushdown(node->right);
+    node->args = projection_pushdown(node->args);
+    node->condition = projection_pushdown(node->condition);
+    node->from = projection_pushdown(node->from);
+
+    // Case: π → σ
+    if (node->type == RA_PROJECTION && node->left && node->left->type == RA_SELECTION) {
+        ASTNode *select_node = node->left;
+
+        // Step 1: Extract attributes used in the selection condition
+        ASTNode *cond_attrs = extract_attributes_from_conditions(select_node->args);
+
+        // Step 2: Merge selection condition attributes + original projection args
+        ASTNode *merged_attrs = merge_attribute_lists(node->args, cond_attrs);
+
+        // Step 3: Create new projection node below selection with merged attributes
+        ASTNode *new_proj = create_node(RA_PROJECTION, "");
+        new_proj->args = merged_attrs;
+        new_proj->left = select_node->left;
+
+        // Step 4: Replace selection's child with new projection
+        select_node->left = new_proj;
+        free_tree(cond_attrs);
+
+        // Recurse downward to handle inner cases (π under joins etc.)
+        return projection_pushdown(select_node);
+    }
+
+    // Case: π → JOIN
+    // Case: π → JOIN
+    if (node->type == RA_PROJECTION && node->left && node->left->type == RA_JOIN) {
+        ASTNode *join_node = node->left;
+
+        ASTNode *proj_attrs = node->args;
+        ASTNode *cond_attrs = extract_attributes_from_conditions(join_node->condition);
+        ASTNode *combined_attrs = merge_attribute_lists(proj_attrs, cond_attrs);
+
+        scope_attr *left_scope = build_scope(join_node->left);
+        if (!left_scope) printf("Left scope is NULL\n");
+        scope_attr *right_scope = build_scope(join_node->right);
+        if (!right_scope) printf("Right scope is NULL\n");
+
+        ASTNode *left_proj_attrs = NULL;
+        ASTNode *right_proj_attrs = NULL;
+        ASTNode *tail_left = NULL, *tail_right = NULL;
+
+        for (ASTNode *curr = combined_attrs; curr; curr = curr->args) {
+            char *attr_full = curr->value;
+            char *dot = strchr(attr_full, '.');
+            char alias[256], attr[256];
+
+            if (dot) {
+                int len = dot - attr_full;
+                strncpy(alias, attr_full, len); alias[len] = '\0';
+                strcpy(attr, dot + 1);
+            } else {
+                strcpy(alias, "");
+                strcpy(attr, attr_full);
+            }
+
+            int found_in_left = 0, found_in_right = 0;
+
+            for (scope_attr *s = left_scope; s; s = s->next) {
+                if (strcmp(s->alias, alias) == 0 && strcmp(s->name, attr) == 0) {
+                    found_in_left = 1;
+                    break;
+                }
+            }
+
+            for (scope_attr *s = right_scope; s; s = s->next) {
+                if (strcmp(s->alias, alias) == 0 && strcmp(s->name, attr) == 0) {
+                    found_in_right = 1;
+                    break;
+                }
+            }
+            
+
+            ASTNode *copy = deep_copy_tree(curr);
+            copy->args = NULL;
+
+            if (found_in_left && !found_in_right) {
+                if (!left_proj_attrs) left_proj_attrs = tail_left = copy;
+                else { tail_left->args = copy; tail_left = copy; }
+            } else if (found_in_right && !found_in_left) {
+                if (!right_proj_attrs) right_proj_attrs = tail_right = copy;
+                else { tail_right->args = copy; tail_right = copy; }
+            }
+        }
+
+        // Step 6: Push down to left
+        if (left_proj_attrs) {
+            ASTNode *left_proj_node = create_node(RA_PROJECTION, "");
+            left_proj_node->args = left_proj_attrs;
+            left_proj_node->left = join_node->left;
+            join_node->left = left_proj_node;
+        }
+
+        // Step 7: Push down to right
+        if (right_proj_attrs) {
+            ASTNode *right_proj_node = create_node(RA_PROJECTION, "");
+            right_proj_node->args = right_proj_attrs;
+            right_proj_node->left = join_node->right;
+            join_node->right = right_proj_node;
+        }
+
+        // Step 8: Check if all projection attributes have been pushed
+        int all_attrs_pushed = 1;
+        for (ASTNode *curr = proj_attrs; curr; curr = curr->args) {
+            if (!attribute_in_list(left_proj_attrs, curr->value) &&
+                !attribute_in_list(right_proj_attrs, curr->value)) {
+                all_attrs_pushed = 0;
+                break;
+            }
+        }
+
+        free_scope(left_scope);
+        free_scope(right_scope);
+        free_tree(combined_attrs);
+
+        if (all_attrs_pushed) {
+            return join_node;
+        } else {
+            node->left = join_node;
+            return node;
+        }
+    }
+
     return node;
 }
 
@@ -1241,11 +1543,11 @@ ASTNode* apply_transformations(ASTNode* node) {
     do {
         changed = 0;
         ASTNode* original = deep_copy_tree(node);
-        ASTNode* after_selection = selection_pushdown(node);
-        if (after_selection != node) {
-            node = after_selection;
-            changed = 1;
-        }
+        //ASTNode* after_selection = selection_pushdown(node);
+        //if (after_selection != node) {
+            //node = after_selection;
+            //changed = 1;
+        //}
 
         ASTNode* after_projection = projection_pushdown(node);
         if (after_projection != node) {
@@ -1262,10 +1564,53 @@ int condition_involves_only(ASTNode* condition, ASTNode* relation) {
     return 1; // Assume true for demonstration
 }
 
-ASTNode* extract_attributes(ASTNode* projection, ASTNode* relation) {
-    // implementation that filters attributes relevant to the relation
-    return deep_copy_tree(projection); // Simplified for demonstration
+
+ASTNode* extract_attributes(ASTNode* attr_list, ASTNode* relation) {
+    if (!attr_list || !relation) return NULL;
+
+    const char* alias = relation->value;
+    ASTNode* result = NULL;
+    ASTNode* last = NULL;
+
+    for (ASTNode* curr = attr_list; curr; curr = curr->args) {
+        if (curr->type == RA_ATTRIBUTE) {
+            char* dot = strchr(curr->value, '.');
+
+            int include = 0;
+
+            if (dot) {
+                // Qualified attribute: alias.attr
+                char prefix[256];
+                strncpy(prefix, curr->value, dot - curr->value);
+                prefix[dot - curr->value] = '\0';
+
+                // Match alias (or table name if you track it)
+                if (strcmp(prefix, alias) == 0) {
+                    include = 1;
+                }
+            } else {
+                // Unqualified attribute: attr
+                // Include just to be safe (or enhance this with schema-based resolution)
+                include = 1;
+            }
+
+            if (include) {
+                ASTNode* new_attr = deep_copy_tree(curr);
+                new_attr->args = NULL;
+
+                if (!result) {
+                    result = last = new_attr;
+                } else {
+                    last->args = new_attr;
+                    last = new_attr;
+                }
+            }
+        }
+    }
+
+    return result;
 }
+
 
 void print_tree(ASTNode* node, int depth) {
     if (!node) return;
@@ -1418,4 +1763,3 @@ void print_tree(ASTNode* node, int depth) {
     print_tree(node->left, depth + 1);
     print_tree(node->right, depth + 1);
 }
-
