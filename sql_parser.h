@@ -105,7 +105,6 @@ ASTNode *apply_transformations(ASTNode *node);
 
 // Helper functions
 int condition_involves_only(ASTNode *cond, scope_attr *scope);
-ASTNode *extract_attributes(ASTNode *projection, ASTNode *relation);
 ASTNode *deep_copy_tree(ASTNode *original);
 ASTNode *extract_attributes_from_conditions(ASTNode *node);
 
