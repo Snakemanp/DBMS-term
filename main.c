@@ -187,9 +187,8 @@ float estimate_selectivity(ASTNode *cond)
 float estimate_join_selectivity(ASTNode *condition, scope_attr *left_scope, scope_attr *right_scope)
 {
     if (!condition || condition->type != RA_COMPARISON)
-        return 1.0f; // Default for non-comparisons
+        return 1.0f;
 
-    // Expecting form: A = B
     if (strcmp(condition->value, "=") != 0)
         return 0.1f;
 
@@ -204,8 +203,8 @@ float estimate_join_selectivity(ASTNode *condition, scope_attr *left_scope, scop
     sscanf(left_attr->value, "%[^.].%s", alias1, name1);
     sscanf(right_attr->value, "%[^.].%s", alias2, name2);
 
-    int distinct1 = 1000; // fallback
-    int distinct2 = 1000;
+    int distinct1 = 0;
+    int distinct2 = 0;
 
     // Search left scope
     for (scope_attr *s = left_scope; s; s = s->next)
@@ -223,7 +222,6 @@ float estimate_join_selectivity(ASTNode *condition, scope_attr *left_scope, scop
         }
     }
 
-    // Search right scope
     for (scope_attr *s = right_scope; s; s = s->next)
     {
         if (strcmp(s->alias, alias2) == 0 && strcmp(s->name, name2) == 0 && s->tablename != NULL)
@@ -393,19 +391,19 @@ int estimate_cardinality(ASTNode *node)
     }
 }
 
-int cost_estimation(ASTNode *node)
+long long int cost_estimation(ASTNode *node)
 {
     if (node == NULL)
         return 0;
 
-    int cost = 0;
+    long long int cost = 0;
 
     switch (node->type)
     {
     case RA_SELECTION:
     {
         scope_attr *scope = build_scope(node);
-        int sel_cost = estimate_selection_cost(node->args, scope);
+        long long int sel_cost = estimate_selection_cost(node->args, scope);
         free_scope(scope);
         cost += sel_cost;
         break; // DO NOT return early
@@ -427,9 +425,9 @@ int cost_estimation(ASTNode *node)
         free_scope(left_scope);
         free_scope(right_scope);
 
-        int join_output = (int)(left_rows * right_rows * join_sel);
+        long long int join_output = (long long int)((long long int)left_rows * right_rows * join_sel);
 
-        int join_cost = (left_rows * width_left) + (right_rows * width_right) + join_output * (width_left + width_right);
+        long long int join_cost = (long long int)(left_rows * width_left) + (right_rows * width_right) + (long long int)(join_output * (long long int)(width_left + width_right));
 
         cost += cost_estimation(node->left);
         cost += cost_estimation(node->right);
@@ -443,7 +441,8 @@ int cost_estimation(ASTNode *node)
     }
 
     // Continue recursion
-    cost += cost_estimation(node->left);
-    cost += cost_estimation(node->right);
+    long long int left_cost = cost_estimation(node->left), right_cost = cost_estimation(node->right);
+    cost += left_cost;
+    cost += right_cost;
     return cost;
 }

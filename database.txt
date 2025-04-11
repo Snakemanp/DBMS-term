@@ -1,34 +1,57 @@
 3
 
 TABLE instructor 4 7000
-    ID   0   4
-    name   0   10
-    dept_name   0   4
-    salary  0   4
+    ID   0   7000
+    name   0   100
+    dept_name   0   3000
+    salary  0   4000
 
 TABLE teaches 5 7000
-    ID   0   20
-    course_id   0   4
-    sec_id   0   4
-    semester 0  4
-    year    0   4
+    ID   0   7000
+    course_id   0   5000
+    sec_id   0   4000
+    semester 0  3000
+    year    0   2000
 
 TABLE course 3 20000
-    course_id   0   20
-    title   0   4
-    dept_name   0   4
-    credits 0   4
+    course_id   0   20000
+    title   0   4000
+    dept_name   0   7000
+    credits 0   3000
 
 //flags 
 1st bit p_key
 2nd bit index
 3nd bit foreignkey
 
+Logical costs for each case
+
+//projection cost
+0
+Assuming projection cost to be zero as the non result columns are freed dirctly.
+
 //select cost
 without indexing n+ n*selectivity (n for traversal and n*selectivity for selection)
 with index cost = log₂(n) + n × selectivity
+selectivity:
+    AND = selectivity of left condition * selectivity of right condition
+    OR  = sel_left + sel_right - sel_left*sel_right
+    =   = 0.1
+    >/</<=/>=  = 0.33
+    !=  = 0.9 
 
 //join
 join_output = left_rows × right_rows × join_selectivity;
-join_selectivity = 1 / max(distinct(R.a), distinct(S.b))
+join_selectivity = 1 (if no condition or comparisons) // 0.1 if comparison
 cost = (n1 × width1) + (n2 × width2) + join_output*(width1 + width2)
+No of rows / cradinality:
+    join : left_rows × right_rows × join_selectivity
+    select : as discussed above
+Join selectivity:
+    =   : 0.1
+    else: 1/(max (noof distinct attr of left , distinct atr of right))
+
+//ORDER By cost
+with index nlog2(n);
+without index n
+

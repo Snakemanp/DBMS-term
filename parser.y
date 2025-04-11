@@ -38,7 +38,7 @@ extern TABLE *tables;
 %token INSERT INTO VALUES DEFAULT WITH RECURSIVE AS
 %token UPDATE ONLY SET ROW
 %token DELETE EXISTS BETWEEN AND OR IN
-%token INNER LEFT RIGHT FULL CROSS JOIN ON IS NOT NULL_VAL 
+%token INNER NATURAL LEFT RIGHT FULL CROSS JOIN ON IS NOT NULL_VAL 
 
 /* Operators and punctuation */
 %token SEMICOLON COMMA DOT ASTERISK LPAREN RPAREN
@@ -102,12 +102,12 @@ statement
         printf("\nOriginal Relational Algebra Tree for sql statement %d:\n",parse_tree_count);
         print_tree($1, 0);
 
-        printf("Cost of actual tree: %d\n",cost_estimation($1));
+        printf("Cost of actual tree: %lld\n",cost_estimation($1));
         
         ASTNode* transformed_both = apply_transformations(deep_copy_tree($$));
         printf("\nTree after Transformations:\n");
         print_tree(transformed_both, 0);
-        printf("Cost of transformed tree: %d\n",cost_estimation(transformed_both));
+        printf("Cost of transformed tree: %lld\n",cost_estimation(transformed_both));
     }
     ;
 
@@ -385,7 +385,7 @@ from_item_list
     }
     | from_item_list COMMA from_item
     {
-        ASTNode* cross_join = create_node(RA_CROSS_JOIN, "×");  // Cross product
+        ASTNode* cross_join = create_node(RA_JOIN, "x");  // Cross product
         cross_join->left = $1;
         cross_join->right = $3;
         $$ = cross_join;
@@ -435,6 +435,7 @@ from_item
         join->condition = $6;
         
         $$ = join;
+        free($2);
     }
     | from_item join_type ID as_id_opt
     {
@@ -451,13 +452,14 @@ from_item
         join->right = right_relation;
         
         $$ = join;
+        free($2);
     }
     ;
 
 join_type
     : INNER JOIN
     {
-        $$ = create_node(RA_JOIN_TYPE, "⋈");  // Natural join symbol
+        $$ = create_node(RA_JOIN_TYPE, "⋈");  // Join symbol
     }
     | LEFT JOIN
     {
@@ -473,11 +475,15 @@ join_type
     }
     | CROSS JOIN
     {
-        $$ = create_node(RA_JOIN_TYPE, "×");  // Cross join symbol
+        $$ = create_node(RA_JOIN_TYPE, "x");  // Cross join symbol
     }
     | JOIN
     {
-        $$ = create_node(RA_JOIN_TYPE, "⋈");  // Natural join symbol
+        $$ = create_node(RA_JOIN_TYPE, "⋈");  // Join symbol
+    }
+    | NATURAL JOIN
+    {
+        $$ = create_node(RA_JOIN_TYPE, "⋈ᴺ");  // Natural join symbol
     }
     ;
 
@@ -1278,7 +1284,7 @@ scope_attr* build_scope(ASTNode* node) {
             return build_scope(node->left);
 
         case RA_JOIN:
-        case RA_CROSS_JOIN: {
+        case RA_JOIN_TYPE:{
             scope_attr* left = build_scope(node->left);
             scope_attr* right = build_scope(node->right);
             return merge_scopes(left, right);
@@ -1317,36 +1323,184 @@ ASTNode* deep_copy_tree(ASTNode* original) {
     return copy;
 }
 
+ASTNode* append_condition(ASTNode* root, ASTNode* cond) {
+    if (!root) return deep_copy_tree(cond);
+
+    ASTNode* new_node = create_node(RA_AND, "AND");
+    new_node->left = root;
+    new_node->right = deep_copy_tree(cond);
+    return new_node;
+}
+
+int condition_involves_only(ASTNode* cond, scope_attr* scope) {
+    if (!cond) return 1;
+    if (cond->type == RA_ATTRIBUTE) {
+        char alias[256], attr[256];
+        char* dot = strchr(cond->value, '.');
+        if (dot) {
+            strncpy(alias, cond->value, dot - cond->value);
+            alias[dot - cond->value] = '\0';
+            strcpy(attr, dot + 1);
+        } else {
+            strcpy(alias, "");
+            strcpy(attr, cond->value);
+        }
+
+        for (scope_attr* s = scope; s; s = s->next) {
+            if (strcmp(s->alias, alias) == 0 && strcmp(s->name, attr) == 0) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    return condition_involves_only(cond->left, scope)
+        && condition_involves_only(cond->right, scope)
+        && condition_involves_only(cond->args, scope);
+}
+
 ASTNode* selection_pushdown(ASTNode* node) {
     if (!node) return NULL;
 
-    if (node->type == RA_SELECTION && node->left && node->left->type == RA_JOIN) {
-        ASTNode* join_node = node->left;
-        ASTNode* condition = node->args;
+    int count = 0;
+    ASTNode* conds[64]; // Assuming at most 64 AND conditions
 
-        // Check if the condition only involves attributes from the left relation
-        if (condition_involves_only(condition, join_node->left)) {
-            // Create a new selection node to push down to the left relation
-            ASTNode* new_selection = create_node(RA_SELECTION, "σ");
-            new_selection->args = deep_copy_tree(condition);
-            new_selection->left = deep_copy_tree(join_node->left);
-
-            // Create a new join node with the selection applied to the left
-            ASTNode* new_join = create_node(RA_JOIN, join_node->value);
-            new_join->left = new_selection;
-            new_join->right = deep_copy_tree(join_node->right);
-            new_join->condition = deep_copy_tree(join_node->condition);
-
-            // Return the new join node directly
-            return new_join;
+    // Flatten condition tree (only handle AND chains here)
+    void flatten_conditions(ASTNode* expr) {
+        if (!expr) return;
+        if (expr->type == RA_AND) {
+            flatten_conditions(expr->left);
+            flatten_conditions(expr->right);
+        } else {
+            conds[count++] = expr;
         }
     }
 
-    // Recursively apply selection pushdown to children
+    // case: pushing the condition of join invloves only one side of the join as select node to reduce the join size
+    if(node->type == RA_JOIN && node->condition){
+        ASTNode* cond = node->condition;
+        flatten_conditions(cond);
+
+        scope_attr* left_scope = build_scope(node->left);
+        scope_attr* right_scope = build_scope(node->right);
+
+        // Step 1: Classify conditions
+        ASTNode* left_conditions = NULL;
+        ASTNode* right_conditions = NULL;
+
+        for (int i = 0; i < count; i++) {
+            ASTNode* c = conds[i];
+            int in_left = condition_involves_only(c, left_scope);
+            int in_right = condition_involves_only(c, right_scope);
+
+            if (in_left) {
+                left_conditions = append_condition(left_conditions, c);
+            } else if (in_right) {
+                right_conditions = append_condition(right_conditions, c);
+            }
+        }
+
+        // Step 2: Push down to join children
+        if (left_conditions) {
+            ASTNode* sel = create_node(RA_SELECTION, "");
+            sel->args = left_conditions;
+            sel->left = node->left;
+            node->left = selection_pushdown(sel);
+        }
+
+        if (right_conditions) {
+            ASTNode* sel = create_node(RA_SELECTION, "");
+            sel->args = right_conditions;
+            sel->left = node->right;
+            node->right = selection_pushdown(sel);
+        }
+
+        free_scope(left_scope);
+        free_scope(right_scope);
+    }
+
+    // Case: σ(cond) over a join
+    if (node->type == RA_SELECTION && node->left && node->left->type == RA_JOIN) {
+        ASTNode* join_node = node->left;
+
+        scope_attr* left_scope = build_scope(join_node->left);
+        scope_attr* right_scope = build_scope(join_node->right);
+
+        // Step 1: Break condition into ANDs
+        ASTNode* cond = node->args;
+
+        flatten_conditions(cond);
+
+        // Step 2: Classify conditions
+        ASTNode* left_conditions = NULL;
+        ASTNode* right_conditions = NULL;
+        ASTNode* join_conditions = NULL;
+
+        for (int i = 0; i < count; i++) {
+            ASTNode* c = conds[i];
+            int in_left = condition_involves_only(c, left_scope);
+            int in_right = condition_involves_only(c, right_scope);
+
+            if (in_left) {
+                left_conditions = append_condition(left_conditions, c);
+            } else if (in_right) {
+                right_conditions = append_condition(right_conditions, c);
+            } else {
+                join_conditions = append_condition(join_conditions, c);
+            }
+        }
+
+        // Step 3: Push down to join children
+        if (left_conditions) {
+            ASTNode* sel = create_node(RA_SELECTION, "");
+            sel->args = left_conditions;
+            sel->left = join_node->left;
+            join_node->left = selection_pushdown(sel);
+        }
+
+        if (right_conditions) {
+            ASTNode* sel = create_node(RA_SELECTION, "");
+            sel->args = right_conditions;
+            sel->left = join_node->right;
+            join_node->right = selection_pushdown(sel);
+        }
+
+
+        // Step 4: Keep remaining at the top if needed
+        free_scope(left_scope);
+        free_scope(right_scope);
+
+        if (join_conditions) {
+            if (join_node->condition) {
+                // Merge existing join condition with new one using AND
+                ASTNode* merged = create_node(RA_AND, "AND");
+                merged->left = join_node->condition;
+                merged->right = join_conditions;
+                join_node->condition = merged;
+            } else {
+                join_node->condition = join_conditions;
+            }
+        }
+        return join_node;
+    }
+
+    // Merge selects
+    if (node->type == RA_SELECTION && node->left && node->left->type == RA_SELECTION) {
+        // Merge conditions into one AND expression
+        ASTNode* merged = create_node(RA_AND, "AND");
+        merged->left = node->args;
+        merged->right = node->left->args;
+
+        node->args = merged;
+        node->left = node->left->left;
+    }
+
+
     node->left = selection_pushdown(node->left);
     node->right = selection_pushdown(node->right);
     return node;
 }
+
 
 int attribute_in_list(ASTNode* list, const char* attr) {
     for (ASTNode* curr = list; curr; curr = curr->args) {
@@ -1402,9 +1556,24 @@ ASTNode* extract_attributes_from_conditions(ASTNode* node) {
     return result;
 }
 
+int is_projection_star_only(ASTNode *args) {
+    for (ASTNode *curr = args; curr; curr = curr->args) {
+        if (!(curr->type == RA_ATTRIBUTE && strcmp(curr->value, "*") == 0)) {
+            return 0;
+        }
+    }
+    return 1;
+}
 
 ASTNode *projection_pushdown(ASTNode *node) {
     if (!node) return NULL;
+
+    if (node->type == RA_PROJECTION && is_projection_star_only(node->args)) {
+        ASTNode *temp = node->left;
+        free_tree(node->args);
+        free(node);
+        return projection_pushdown(temp);
+    }
 
     node->left = projection_pushdown(node->left);
     node->right = projection_pushdown(node->right);
@@ -1435,9 +1604,8 @@ ASTNode *projection_pushdown(ASTNode *node) {
         return projection_pushdown(select_node);
     }
 
-    // Case: π → JOIN
-    // Case: π → JOIN
-    if (node->type == RA_PROJECTION && node->left && node->left->type == RA_JOIN) {
+    // Case: π → JOIN(any join)
+    if (node->type == RA_PROJECTION && node->left && (node->left->type == RA_JOIN || node->left->type == RA_JOIN_TYPE)) {
         ASTNode *join_node = node->left;
 
         ASTNode *proj_attrs = node->args;
@@ -1533,6 +1701,12 @@ ASTNode *projection_pushdown(ASTNode *node) {
             return node;
         }
     }
+    if (node->type == RA_PROJECTION && node->left && node->left->type == RA_PROJECTION) {
+        // Keep only attributes from outer projection
+        node->left = node->left->left; // remove inner projection
+        return node;
+    }
+
 
     return node;
 }
@@ -1543,11 +1717,11 @@ ASTNode* apply_transformations(ASTNode* node) {
     do {
         changed = 0;
         ASTNode* original = deep_copy_tree(node);
-        //ASTNode* after_selection = selection_pushdown(node);
-        //if (after_selection != node) {
-            //node = after_selection;
-            //changed = 1;
-        //}
+        ASTNode* after_selection = selection_pushdown(node);
+        if (after_selection != node) {
+            node = after_selection;
+            changed = 1;
+        }
 
         ASTNode* after_projection = projection_pushdown(node);
         if (after_projection != node) {
@@ -1557,11 +1731,6 @@ ASTNode* apply_transformations(ASTNode* node) {
     } while (changed);
 
     return node;
-}
-
-int condition_involves_only(ASTNode* condition, ASTNode* relation) {
-    // implementation that checks if condition only uses attributes from relation
-    return 1; // Assume true for demonstration
 }
 
 
@@ -1650,9 +1819,6 @@ void print_tree(ASTNode* node, int depth) {
                 printf("Condition:\n");
                 print_tree(node->condition, depth + 2);
             }
-            break;
-        case RA_CROSS_JOIN:
-            printf("×-cross join\n");
             break;
         case RA_SET_OP:
             printf("%s-set_op\n", node->value);

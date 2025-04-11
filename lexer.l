@@ -57,6 +57,7 @@ void count();
 "RIGHT"     { count(); return RIGHT; }
 "FULL"      { count(); return FULL; }
 "CROSS"     { count(); return CROSS; }
+"NATURAL"   { count(); return NATURAL;}
 
 [a-zA-Z_][a-zA-Z0-9_]* { 
     count(); 

@@ -94,32 +94,33 @@ extern int yydebug;
     OR = 295,                      /* OR  */
     IN = 296,                      /* IN  */
     INNER = 297,                   /* INNER  */
-    LEFT = 298,                    /* LEFT  */
-    RIGHT = 299,                   /* RIGHT  */
-    FULL = 300,                    /* FULL  */
-    CROSS = 301,                   /* CROSS  */
-    JOIN = 302,                    /* JOIN  */
-    ON = 303,                      /* ON  */
-    IS = 304,                      /* IS  */
-    NOT = 305,                     /* NOT  */
-    NULL_VAL = 306,                /* NULL_VAL  */
-    SEMICOLON = 307,               /* SEMICOLON  */
-    COMMA = 308,                   /* COMMA  */
-    DOT = 309,                     /* DOT  */
-    ASTERISK = 310,                /* ASTERISK  */
-    LPAREN = 311,                  /* LPAREN  */
-    RPAREN = 312,                  /* RPAREN  */
-    EQ = 313,                      /* EQ  */
-    NE = 314,                      /* NE  */
-    LT = 315,                      /* LT  */
-    GT = 316,                      /* GT  */
-    LE = 317,                      /* LE  */
-    GE = 318,                      /* GE  */
-    CONCAT = 319,                  /* CONCAT  */
-    PLUS = 320,                    /* PLUS  */
-    MINUS = 321,                   /* MINUS  */
-    DIV = 322,                     /* DIV  */
-    UMINUS = 323                   /* UMINUS  */
+    NATURAL = 298,                 /* NATURAL  */
+    LEFT = 299,                    /* LEFT  */
+    RIGHT = 300,                   /* RIGHT  */
+    FULL = 301,                    /* FULL  */
+    CROSS = 302,                   /* CROSS  */
+    JOIN = 303,                    /* JOIN  */
+    ON = 304,                      /* ON  */
+    IS = 305,                      /* IS  */
+    NOT = 306,                     /* NOT  */
+    NULL_VAL = 307,                /* NULL_VAL  */
+    SEMICOLON = 308,               /* SEMICOLON  */
+    COMMA = 309,                   /* COMMA  */
+    DOT = 310,                     /* DOT  */
+    ASTERISK = 311,                /* ASTERISK  */
+    LPAREN = 312,                  /* LPAREN  */
+    RPAREN = 313,                  /* RPAREN  */
+    EQ = 314,                      /* EQ  */
+    NE = 315,                      /* NE  */
+    LT = 316,                      /* LT  */
+    GT = 317,                      /* GT  */
+    LE = 318,                      /* LE  */
+    GE = 319,                      /* GE  */
+    CONCAT = 320,                  /* CONCAT  */
+    PLUS = 321,                    /* PLUS  */
+    MINUS = 322,                   /* MINUS  */
+    DIV = 323,                     /* DIV  */
+    UMINUS = 324                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -168,32 +169,33 @@ extern int yydebug;
 #define OR 295
 #define IN 296
 #define INNER 297
-#define LEFT 298
-#define RIGHT 299
-#define FULL 300
-#define CROSS 301
-#define JOIN 302
-#define ON 303
-#define IS 304
-#define NOT 305
-#define NULL_VAL 306
-#define SEMICOLON 307
-#define COMMA 308
-#define DOT 309
-#define ASTERISK 310
-#define LPAREN 311
-#define RPAREN 312
-#define EQ 313
-#define NE 314
-#define LT 315
-#define GT 316
-#define LE 317
-#define GE 318
-#define CONCAT 319
-#define PLUS 320
-#define MINUS 321
-#define DIV 322
-#define UMINUS 323
+#define NATURAL 298
+#define LEFT 299
+#define RIGHT 300
+#define FULL 301
+#define CROSS 302
+#define JOIN 303
+#define ON 304
+#define IS 305
+#define NOT 306
+#define NULL_VAL 307
+#define SEMICOLON 308
+#define COMMA 309
+#define DOT 310
+#define ASTERISK 311
+#define LPAREN 312
+#define RPAREN 313
+#define EQ 314
+#define NE 315
+#define LT 316
+#define GT 317
+#define LE 318
+#define GE 319
+#define CONCAT 320
+#define PLUS 321
+#define MINUS 322
+#define DIV 323
+#define UMINUS 324
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -205,7 +207,7 @@ union YYSTYPE
     int num;
     struct ASTNode* node;
 
-#line 209 "y.tab.h"
+#line 211 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

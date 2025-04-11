@@ -11,7 +11,6 @@ typedef enum
     RA_GROUPBY,
     RA_ORDERBY,
     RA_JOIN,
-    RA_CROSS_JOIN,
     RA_SET_OP,
     RA_WITH,
     RA_WITH_LIST,
@@ -105,7 +104,7 @@ ASTNode *projection_pushdown(ASTNode *node);
 ASTNode *apply_transformations(ASTNode *node);
 
 // Helper functions
-int condition_involves_only(ASTNode *condition, ASTNode *relation);
+int condition_involves_only(ASTNode *cond, scope_attr *scope);
 ASTNode *extract_attributes(ASTNode *projection, ASTNode *relation);
 ASTNode *deep_copy_tree(ASTNode *original);
 ASTNode *extract_attributes_from_conditions(ASTNode *node);
@@ -115,6 +114,6 @@ scope_attr *merge_scopes(scope_attr *left, scope_attr *right);
 scope_attr *build_scope(ASTNode *node);
 void free_scope(scope_attr *scope);
 
-int cost_estimation(ASTNode *node);
+long long int cost_estimation(ASTNode *node);
 
 #endif
