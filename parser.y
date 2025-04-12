@@ -75,7 +75,7 @@ int changed=0;
 %type <node> condition not_opt in_items comparison_op
 %type <node> operand summand factor term
 %type <node> with_clause_opt order_option nulls_option
-%type <node> join_type set_op modified_id
+%type <node> join_type set_op modified_id base_table joined_table join_condition_opt
 
 %%
 
@@ -379,18 +379,15 @@ from_clause
     }
     ;
 
+
 from_item_list
-    : LPAREN from_item_list RPAREN
-    {
-        $$ = $2;
-    }
-    | from_item
+    : from_item
     {
         $$ = $1;
     }
     | from_item_list COMMA from_item
     {
-        ASTNode* cross_join = create_node(RA_JOIN, "x");  // Cross product
+        ASTNode* cross_join = create_node(RA_JOIN, "×");  // Cross product
         cross_join->left = $1;
         cross_join->right = $3;
         $$ = cross_join;
@@ -398,6 +395,21 @@ from_item_list
     ;
 
 from_item
+    : joined_table
+    {
+        $$=$1;
+    }
+    | base_table
+    {
+        $$=$1;
+    }
+    | LPAREN from_item RPAREN
+    {
+        $$=$2;
+    }
+    ;
+
+base_table
     : modified_id as_id_opt
     {
         if ($2->type != RA_EMPTY) {
@@ -414,49 +426,50 @@ from_item
         if ($4->type != RA_EMPTY) {
             // Handle table alias
             ASTNode* alias = create_node(RA_ALIAS, $4->value);
-            alias->left = $2;
+            alias->left = create_node(RA_RELATION, $2->value);
             $$ = alias;
         } else {
-            $$ = $2;
+            $$ = create_node(RA_RELATION, $2->value);
+            $$->left = $2;
         }
     }
-    | from_item join_type ID as_id_opt ON expression
-    {
-        ASTNode* right_relation;
-        if ($4->type != RA_EMPTY) {
-            right_relation = create_node(RA_ALIAS, $4->value);
-            right_relation->left = create_node(RA_RELATION, $3);
-        } else {
-            right_relation = create_node(RA_RELATION, $3);
-        }
-        
+    ;
+
+joined_table
+    : from_item join_type base_table join_condition_opt
+    {        
         ASTNode* join = create_node(RA_JOIN, $2->value);
         join->left = $1;
-        join->right = right_relation;
+        join->right = $3;
         
         // Add join condition
-        join->condition = $6;
+        if($4->type != RA_EMPTY) join->condition = $4;
         
         $$ = join;
-        free($2);
     }
-    | from_item join_type ID as_id_opt
-    {
-        ASTNode* right_relation;
-        if ($4->type != RA_EMPTY) {
-            right_relation = create_node(RA_ALIAS, $4->value);
-            right_relation->left = create_node(RA_RELATION, $3);
-        } else {
-            right_relation = create_node(RA_RELATION, $3);
-        }
-        
+    | from_item join_type LPAREN joined_table RPAREN join_condition_opt
+    {        
         ASTNode* join = create_node(RA_JOIN, $2->value);
         join->left = $1;
-        join->right = right_relation;
+        join->right = $4;
+        
+        // Add join condition
+        if($6->type != RA_EMPTY) join->condition = $6;
         
         $$ = join;
-        free($2);
     }
+    ;
+
+join_condition_opt
+    : ON expression
+    {
+        $$ = $2;
+    }
+    | /* empty */
+    {
+        $$ = create_node(RA_EMPTY, "");
+    }
+    /* | USING LPAREN column_name_list RPAREN */
     ;
 
 join_type

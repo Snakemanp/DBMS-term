@@ -3,6 +3,10 @@ FROM instructor i
 JOIN teaches t ON i.ID = t.ID
 WHERE i.salary > 100000;
 
+SELECT i.name, t.course_id, c.title
+FROM instructor i
+JOIN (teaches t JOIN course c ON t.course_id = c.course_id) ON i.ID = t.ID;
+
 SELECT i.name, c.credits
 FROM instructor i
 JOIN teaches t ON i.ID = t.ID
