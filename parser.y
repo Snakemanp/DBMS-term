@@ -97,16 +97,20 @@ statement_list
 statement
     : query SEMICOLON
     {
-        $$ = create_node(RA_SCOPE,NULL);
-        $$->left = $1;
+        $$ = $1;
         parse_tree[parse_tree_count] = $$;
         parse_tree_count++;
         printf("\nOriginal Relational Algebra Tree for sql statement %d:\n",parse_tree_count);
         print_tree($1, 0);
 
         printf("Cost of actual tree: %lld\n",cost_estimation($1));
+
+        ASTNode* temp_project = deep_copy_shallow($$);
+        temp_project->args = deep_copy_tree($$->args);
         
         ASTNode* transformed_both = apply_transformations($$);
+        temp_project->left = transformed_both;
+        transformed_both = temp_project;
         printf("\nTree after Transformations:\n");
         print_tree(transformed_both, 0);
         printf("Cost of transformed tree: %lld\n",cost_estimation(transformed_both));
@@ -273,8 +277,7 @@ with_query
     : ID AS LPAREN query RPAREN 
     {
         $$ = create_node(RA_ALIAS, $1);
-        $$->left = create_node(RA_SCOPE,NULL);
-        $$->left->left = $4;
+        $$->left = $4;
     }
     ;
 
@@ -411,12 +414,10 @@ from_item
         if ($4->type != RA_EMPTY) {
             // Handle table alias
             ASTNode* alias = create_node(RA_ALIAS, $4->value);
-            alias->left = create_node(RA_SCOPE, NULL);
-            alias->left->left = $2;
+            alias->left = $2;
             $$ = alias;
         } else {
-            $$ = create_node(RA_SCOPE, NULL);
-            $$->left = $2;
+            $$ = $2;
         }
     }
     | from_item join_type ID as_id_opt ON expression

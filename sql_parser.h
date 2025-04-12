@@ -49,8 +49,7 @@ typedef enum
     RA_OPERATOR,
     RA_EXISTS,
     RA_BETWEEN,
-    RA_TRANSFORMED,
-    RA_SCOPE
+    RA_TRANSFORMED
 } NodeType;
 
 typedef struct
@@ -106,6 +105,7 @@ ASTNode *apply_transformations(ASTNode *node);
 // Helper functions
 int condition_involves_only(ASTNode *cond, scope_attr *scope);
 ASTNode *deep_copy_tree(ASTNode *original);
+ASTNode *deep_copy_shallow(ASTNode *node);
 ASTNode *extract_attributes_from_conditions(ASTNode *node);
 
 // scope attribute functions
