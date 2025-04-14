@@ -2462,6 +2462,17 @@ ASTNode* pre_transform_tree(ASTNode* node, scope_attr* req) {
     
     // Process node based on type
     if (node->type == RA_PROJECTION) {
+        int all_attributes = is_projection_star_only(node);
+        if(all_attributes){
+
+            ASTNode *temp = node; 
+            node = node->left;
+            
+            free_scope(extended);
+            free_scope(scope_left);
+            free_scope(scope_right);
+            return node;
+        }
         ASTNode* proj_attrs = node->args;
         
         if (is_projection_star_only(proj_attrs)) {

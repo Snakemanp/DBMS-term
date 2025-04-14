@@ -47,3 +47,5 @@ INSERT INTO teaches (ID, name, department, age)
 VALUES (101, 'Alice', 'CS', 20);
 
 DELETE FROM teaches WHERE ID > 21;
+
+SELECT * FROM instructor WHERE ID >4;
