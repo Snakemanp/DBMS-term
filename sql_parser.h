@@ -86,6 +86,8 @@ typedef struct ASTNode
     struct ASTNode *condition; // For join conditions, WHERE, etc.
     struct ASTNode *from;      // For UPDATE's FROM clause
     // scope_attr *scope;         // For scoping attributes
+    int assoc_left_done;
+    int assoc_right_done;
 } ASTNode;
 
 extern ASTNode *parse_tree[10];
@@ -100,6 +102,9 @@ void print_subtree(ASTNode *node, int depth);
 // Transformation functions
 ASTNode *selection_pushdown(ASTNode *node);
 ASTNode *projection_pushdown(ASTNode *node);
+
+void join_associativity(ASTNode *node);
+// void join_associativity(ASTNode *node, ASTNode *node2, ASTNode *org_node);
 ASTNode *apply_transformations(ASTNode *node);
 
 // Helper functions
@@ -114,5 +119,8 @@ scope_attr *build_scope(ASTNode *node);
 void free_scope(scope_attr *scope);
 
 long long int cost_estimation(ASTNode *node);
+attr *get_attr_from_table(TABLE *table, const char *attr_name);
+
+void generate_associative_variants(ASTNode *root, ASTNode **best_tree);
 
 #endif
