@@ -97,8 +97,10 @@ Read from `documentation.txt` during startup.
 2. teaches ( ID , course_id , sec_id , semester , year )
 3. course ( course_id , title , dept_name , credits )
 
-### 📄 Sample Query Optimization:
-```text
+
+---
+
+### ⚙️ Sample Query Optimization:
 
 Original Relational Algebra Tree for sql statement 1:
 π-Project ()
