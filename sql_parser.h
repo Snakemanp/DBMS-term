@@ -2,6 +2,15 @@
 #define SQL_PARSER_H
 
 #define MAX_STRING_LENGTH 256
+#define MAX_RES_TREE 25
+
+#define BLOCK_SIZE 4096                            // bytes
+#define TUPLE_SIZE 100                             // bytes (assumed average tuple size)
+#define TUPLES_PER_BLOCK (BLOCK_SIZE / TUPLE_SIZE) // 40 tuples per block
+#define INDEX_HEIGHT 1                             // Assumed B+-tree height
+#define BUFFER_BLOCKS 100                          // Number of buffer blocks (M)
+#define TS 40                                      // Seek time: 4ms = 40 * 0.1ms
+#define TB 1                                       // Block transfer time: 0.1ms = 1 * 0.1ms
 
 typedef enum
 {
@@ -56,6 +65,7 @@ typedef struct
 {
     char *name;
     int flag;
+    int num_distinct;
     int max_len;
 } attr;
 
@@ -100,11 +110,11 @@ void free_tree(ASTNode *node);
 void print_subtree(ASTNode *node, int depth);
 
 // Transformation functions
+ASTNode *pre_transform_tree(ASTNode *node, scope_attr *req);
 ASTNode *selection_pushdown(ASTNode *node);
 ASTNode *projection_pushdown(ASTNode *node);
-
-void join_associativity(ASTNode *node);
-// void join_associativity(ASTNode *node, ASTNode *node2, ASTNode *org_node);
+void join_associativity(ASTNode *node, ASTNode *node2, ASTNode *org_node);
+void apply_join_transf(ASTNode *node);
 ASTNode *apply_transformations(ASTNode *node);
 
 // Helper functions
@@ -118,9 +128,12 @@ scope_attr *merge_scopes(scope_attr *left, scope_attr *right);
 scope_attr *build_scope(ASTNode *node);
 void free_scope(scope_attr *scope);
 
-long long int cost_estimation(ASTNode *node);
+long long cost_calculation(ASTNode *node);
 attr *get_attr_from_table(TABLE *table, const char *attr_name);
 
-void generate_associative_variants(ASTNode *root, ASTNode **best_tree);
+void print_tree_scope(ASTNode *node, int level);
+
+long long estimate_size(ASTNode *node);
+long long estimate_distinct_values(ASTNode *node, const char *attr_name);
 
 #endif
