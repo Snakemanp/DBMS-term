@@ -422,6 +422,7 @@ long long cost_selection(ASTNode *selection_node)
 {
     if (!selection_node || !selection_node->left)
         return 0; // Invalid selection node
+
     ASTNode *input = selection_node->left;
     ASTNode *condition = selection_node->args;
     long long block_transfers = 0, seeks = 0;
@@ -458,7 +459,19 @@ long long cost_selection(ASTNode *selection_node)
 
             if (left->type == RA_ATTRIBUTE && right->type == RA_LITERAL)
             {
-                const char *attr_name = left->value;
+                char attr_name[MAX_STRING_LENGTH];
+                char *dot = strchr(left->value, '.');
+
+                if (dot)
+                {
+                    int len = dot - left->value;
+                    strcpy(attr_name, dot + 1);
+                }
+                else
+                {
+                    strcpy(attr_name, left->value);
+                }
+
                 if (!attr_name)
                     return b_r * TB + TS; // Missing attribute
                 long long flag = get_flag(table_name, attr_name);
@@ -505,7 +518,8 @@ long long cost_selection(ASTNode *selection_node)
                         seeks = TS;
                     }
                 }
-                return block_transfers + seeks;
+                return (block_transfers + seeks > b_r * TB + TS) ? b_r * TB + TS : block_transfers + seeks;
+                // return block_transfers + seeks;
             }
         }
         else if (condition->type == RA_AND)
@@ -520,11 +534,7 @@ long long cost_selection(ASTNode *selection_node)
     }
     else
     {
-        long long n = estimate_size(input);
-        if (n == -1)
-            return 0;
-        long long b = (n + tpb - 1) / tpb;
-        block_transfers = b * TB;
+        block_transfers = b_r * TB;
         seeks = TS;
         return block_transfers + seeks;
     }
@@ -592,6 +602,7 @@ long long cost_join(ASTNode *join_node)
                         if (num_distinct > 0)
                         {
                             long long n_matching = get_num_tuples(right_table) / num_distinct;
+                            n_matching = 1;
                             long long b_matching = (n_matching + tpb_right - 1) / tpb_right;
                             block_transfers = b_left * TB + n_left * (INDEX_HEIGHT * TB + b_matching * TB);
                             seeks = b_left * TS + n_left * (INDEX_HEIGHT + b_matching) * TS;
@@ -604,6 +615,7 @@ long long cost_join(ASTNode *join_node)
                         if (num_distinct > 0)
                         {
                             long long n_matching = get_num_tuples(right_table) / num_distinct;
+                            n_matching = 1;
                             block_transfers = b_left * TB + n_left * (INDEX_HEIGHT * TB + n_matching * TB);
                             seeks = b_left * TS + n_left * (INDEX_HEIGHT + n_matching) * TS;
                             return block_transfers + seeks;

@@ -48,4 +48,6 @@ VALUES (101, 'Alice', 'CS', 20);
 
 DELETE FROM teaches WHERE ID > 21;
 
-SELECT * FROM instructor WHERE ID >4;
+SELECT ID FROM instructor AS c WHERE ID = 4;
+
+SELECT * FROM instructor JOIN course ON instructor.ID = credits;
