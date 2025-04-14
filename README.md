@@ -96,12 +96,11 @@ Read from `documentation.txt` during startup.
 1. instructor ( ID , name , dept_name , salary )
 2. teaches ( ID , course_id , sec_id , semester , year )
 3. course ( course_id , title , dept_name , credits )
-
-
+```
 ---
 
 ### ⚙️ Sample Query Optimization:
-
+```text
 Original Relational Algebra Tree for sql statement 1:
 π-Project ()
   Attribute: c.credits
@@ -1429,3 +1428,4 @@ Optimized Tree:
         Relation: course
 
 Cost of Optimized tree 22: 7598
+```
