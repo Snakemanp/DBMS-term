@@ -1330,7 +1330,12 @@ scope_attr* build_scope(ASTNode* node) {
             scope_attr* tail = NULL;
 
             for (ASTNode* curr = node->args; curr; curr = curr->left) {
-                if (curr->type == RA_ATTRIBUTE) {
+                if (curr->type == RA_ATTRIBUTE || curr->type == RA_ALIAS) {
+                    ASTNode *alias_node = NULL;
+                    if(curr->type == RA_ALIAS){
+                        alias_node = curr;
+                        curr = curr->left;
+                    }
                     char* dot = strchr(curr->value, '.');
                     char alias_buf[256], name_buf[256];
 
@@ -1356,7 +1361,8 @@ scope_attr* build_scope(ASTNode* node) {
 
                     scope_attr* sa = (scope_attr*)malloc(sizeof(scope_attr));
                     sa->alias = strdup(alias_buf);
-                    sa->name = strdup(name_buf);
+                    if(alias_node) sa->name = strdup(alias_node->value);
+                    else sa->name = strdup(name_buf);
                     sa->tablename = matched_table;
                     sa->next = NULL;
 

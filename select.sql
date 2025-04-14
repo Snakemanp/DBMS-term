@@ -50,4 +50,4 @@ DELETE FROM teaches WHERE ID > 21;
 
 SELECT ID FROM instructor AS c WHERE ID = 4;
 
-SELECT * FROM instructor JOIN course ON instructor.ID = credits;
+SELECT ID AS id FROM instructor JOIN course ON instructor.ID = credits;
