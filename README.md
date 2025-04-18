@@ -60,6 +60,7 @@ Design a system capable of processing SQL-like queries by:
 ### 🧾 Parsing
 - **Flex** scans SQL tokens (keywords, identifiers, operators, literals).
 - **Bison** applies grammar rules to structure queries and build the **relational algebra tree**.
+- (The corrent implementataion cannot handle aliasing of attributes but can handle aliasing of tables)
 
 ### 🌳 Relational Algebra Tree
 - Built as binary trees where each node represents a relational operator.
