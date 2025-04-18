@@ -1,9 +1,9 @@
 SELECT 
     i.ID,
-    i.name AS instructor_name,
-    i.salary AS instructor_salary,
-    w.age AS worker_age,
-    c.title AS course_title,
+    i.name,
+    i.salary,
+    w.age,
+    c.title,
     c.credits
 FROM 
     instructor i
