@@ -104,14 +104,10 @@ Read from `documentation.txt` during startup.
 Original Relational Algebra Tree for sql statement 1:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -143,14 +139,10 @@ Cost of actual tree: 24764
 Tree after Pre-Transformations:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -182,14 +174,10 @@ Tree after Transformations:
 Transformed Tree 1:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -198,22 +186,29 @@ Transformed Tree 1:
         Attribute: w.ID
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
+        Attribute: c.title
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
       ⋈-join
         Condition:
           Comparison: =
             Attribute: t.course_id
             Attribute: c.course_id
         π-Project ()
-          Attribute: i.ID
-            Attribute: t.course_id
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
+                Attribute: t.course_id
           ⋈-join
             Condition:
               Comparison: =
                 Attribute: i.ID
                 Attribute: t.ID
             π-Project ()
-              Attribute: i.ID
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
               AS i
                 Relation: instructor
             π-Project ()
@@ -223,27 +218,25 @@ Transformed Tree 1:
                 Relation: teaches
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
     π-Project ()
-      Attribute: w.ID
+      Attribute: w.age
+        Attribute: w.ID
       AS w
         Relation: workers
 
-Cost of transformed tree 1: 15767116852
+Cost of transformed tree 1: 40182415362
 
 Transformed Tree 2:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -256,28 +249,36 @@ Transformed Tree 2:
           Attribute: c.course_id
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: c.course_id
       ⋈-join
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
+            Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: t.ID
         π-Project ()
-          Attribute: i.ID
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
           AS i
             Relation: instructor
         π-Project ()
@@ -286,19 +287,15 @@ Transformed Tree 2:
           AS t
             Relation: teaches
 
-Cost of transformed tree 2: 677564624
+Cost of transformed tree 2: 2255579271
 
 Transformed Tree 3:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -306,23 +303,30 @@ Transformed Tree 3:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: w.ID
         π-Project ()
-          Attribute: i.ID
-            Attribute: t.course_id
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
+                Attribute: t.course_id
           ⋈-join
             Condition:
               Comparison: =
                 Attribute: i.ID
                 Attribute: t.ID
             π-Project ()
-              Attribute: i.ID
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
               AS i
                 Relation: instructor
             π-Project ()
@@ -331,28 +335,26 @@ Transformed Tree 3:
               AS t
                 Relation: teaches
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 3: 6380766
+Cost of transformed tree 3: 18656821737
 
 Transformed Tree 4:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -364,13 +366,17 @@ Transformed Tree 4:
           Attribute: i.ID
           Attribute: t.ID
     π-Project ()
-      Attribute: i.ID
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
       AS i
         Relation: instructor
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: t.ID
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: t.ID
       ⋈-join
         Condition:
           Comparison: =
@@ -378,16 +384,20 @@ Transformed Tree 4:
             Attribute: c.course_id
         π-Project ()
           Attribute: c.credits
-            Attribute: w.ID
-              Attribute: c.course_id
+            Attribute: c.title
+              Attribute: w.age
+                Attribute: w.ID
+                  Attribute: c.course_id
           ⋈-join
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
             π-Project ()
               Attribute: c.credits
-                Attribute: c.course_id
+                Attribute: c.title
+                  Attribute: c.course_id
               AS c
                 Relation: course
         π-Project ()
@@ -396,19 +406,15 @@ Transformed Tree 4:
           AS t
             Relation: teaches
 
-Cost of transformed tree 4: 1493216618
+Cost of transformed tree 4: 2519804377
 
 Transformed Tree 5:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -426,45 +432,51 @@ Transformed Tree 5:
         Relation: teaches
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: i.salary
+              Attribute: i.name
+                Attribute: i.ID
+                  Attribute: c.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: w.ID
         π-Project ()
-          Attribute: i.ID
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
           AS i
             Relation: instructor
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
-              Attribute: w.ID
+            Attribute: c.title
+              Attribute: w.age
+                Attribute: c.course_id
+                  Attribute: w.ID
           ⋈-join
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
             π-Project ()
               Attribute: c.credits
-                Attribute: c.course_id
+                Attribute: c.title
+                  Attribute: c.course_id
               AS c
                 Relation: course
 
-Cost of transformed tree 5: 1459170766
+Cost of transformed tree 5: 3425326365
 
 Transformed Tree 6:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -472,8 +484,11 @@ Transformed Tree 6:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           And: AND
@@ -484,12 +499,14 @@ Transformed Tree 6:
               Attribute: i.ID
               Attribute: w.ID
         π-Project ()
-          Attribute: t.course_id
-            Attribute: t.ID
-              Attribute: w.ID
+          Attribute: w.age
+            Attribute: t.course_id
+              Attribute: t.ID
+                Attribute: w.ID
           ⋈-join
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
             π-Project ()
@@ -498,28 +515,27 @@ Transformed Tree 6:
               AS t
                 Relation: teaches
         π-Project ()
-          Attribute: i.ID
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
           AS i
             Relation: instructor
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 6: 29053810929
+Cost of transformed tree 6: 74618130520
 
 Transformed Tree 7:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -527,26 +543,35 @@ Transformed Tree 7:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: t.ID
         π-Project ()
-          Attribute: i.ID
+          Attribute: w.age
+            Attribute: i.salary
+              Attribute: i.name
+                Attribute: i.ID
           ⋈-join
             Condition:
               Comparison: =
                 Attribute: i.ID
                 Attribute: w.ID
             π-Project ()
-              Attribute: i.ID
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
               AS i
                 Relation: instructor
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
         π-Project ()
@@ -556,23 +581,20 @@ Transformed Tree 7:
             Relation: teaches
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 7: 3228902
+Cost of transformed tree 7: 18658634207
 
 Transformed Tree 8:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -584,17 +606,22 @@ Transformed Tree 8:
           Attribute: i.ID
           Attribute: t.ID
     π-Project ()
-      Attribute: i.ID
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
       AS i
         Relation: instructor
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: t.ID
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: t.ID
       ⋈-join
         π-Project ()
           Attribute: c.credits
-            Attribute: t.ID
+            Attribute: c.title
+              Attribute: t.ID
           ⋈-join
             Condition:
               Comparison: =
@@ -607,27 +634,25 @@ Transformed Tree 8:
                 Relation: teaches
             π-Project ()
               Attribute: c.credits
-                Attribute: c.course_id
+                Attribute: c.title
+                  Attribute: c.course_id
               AS c
                 Relation: course
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
 
-Cost of transformed tree 8: 1467344234
+Cost of transformed tree 8: 2474546782
 
 Transformed Tree 9:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -639,25 +664,31 @@ Transformed Tree 9:
           Attribute: i.ID
           Attribute: t.ID
     π-Project ()
-      Attribute: i.ID
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
       AS i
         Relation: instructor
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: t.ID
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: t.ID
       ⋈-join
         Condition:
           Comparison: =
             Attribute: t.course_id
             Attribute: c.course_id
         π-Project ()
-          Attribute: w.ID
-            Attribute: t.ID
-              Attribute: t.course_id
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: t.ID
+                Attribute: t.course_id
           ⋈-join
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
             π-Project ()
@@ -667,23 +698,20 @@ Transformed Tree 9:
                 Relation: teaches
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
 
-Cost of transformed tree 9: 1470782083
+Cost of transformed tree 9: 2477994403
 
 Transformed Tree 10:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -701,45 +729,52 @@ Transformed Tree 10:
         Relation: teaches
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: i.salary
+              Attribute: i.name
+                Attribute: i.ID
+                  Attribute: c.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: w.ID
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
         π-Project ()
           Attribute: c.credits
-            Attribute: i.ID
-              Attribute: c.course_id
+            Attribute: c.title
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
+                    Attribute: c.course_id
           ⋈-join
             π-Project ()
-              Attribute: i.ID
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
               AS i
                 Relation: instructor
             π-Project ()
               Attribute: c.credits
-                Attribute: c.course_id
+                Attribute: c.title
+                  Attribute: c.course_id
               AS c
                 Relation: course
 
-Cost of transformed tree 10: 1458985581
+Cost of transformed tree 10: 3425216412
 
 Transformed Tree 11:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -757,43 +792,50 @@ Transformed Tree 11:
         Relation: teaches
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: i.salary
+              Attribute: i.name
+                Attribute: i.ID
+                  Attribute: c.course_id
       ⋈-join
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
         π-Project ()
-          Attribute: i.ID
+          Attribute: w.age
+            Attribute: i.salary
+              Attribute: i.name
+                Attribute: i.ID
           ⋈-join
             Condition:
               Comparison: =
                 Attribute: i.ID
                 Attribute: w.ID
             π-Project ()
-              Attribute: w.ID
+              Attribute: w.age
+                Attribute: w.ID
               AS w
                 Relation: workers
             π-Project ()
-              Attribute: i.ID
+              Attribute: i.salary
+                Attribute: i.name
+                  Attribute: i.ID
               AS i
                 Relation: instructor
 
-Cost of transformed tree 11: 1458438178
+Cost of transformed tree 11: 3424318745
 
 Transformed Tree 12:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -824,14 +866,10 @@ Cost of transformed tree 12: 24764
 Transformed Tree 13:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -840,7 +878,10 @@ Transformed Tree 13:
         Attribute: w.ID
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
+        Attribute: c.title
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
       ⋈-join
         Condition:
           Comparison: =
@@ -858,23 +899,20 @@ Transformed Tree 13:
         AS c
           Relation: course
     π-Project ()
-      Attribute: w.ID
+      Attribute: w.age
+        Attribute: w.ID
       AS w
         Relation: workers
 
-Cost of transformed tree 13: 14205
+Cost of transformed tree 13: 17035
 
 Transformed Tree 14:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -883,15 +921,20 @@ Transformed Tree 14:
         Attribute: w.ID
     π-Project ()
       Attribute: c.credits
-        Attribute: i.ID
+        Attribute: c.title
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
       ⋈-join
         Condition:
           Comparison: =
             Attribute: t.course_id
             Attribute: c.course_id
         π-Project ()
-          Attribute: i.ID
-            Attribute: t.course_id
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
+                Attribute: t.course_id
           ⋈-join
             Condition:
               Comparison: =
@@ -903,27 +946,25 @@ Transformed Tree 14:
               Relation: teaches
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
     π-Project ()
-      Attribute: w.ID
+      Attribute: w.age
+        Attribute: w.ID
       AS w
         Relation: workers
 
-Cost of transformed tree 14: 9013716
+Cost of transformed tree 14: 22965243
 
 Transformed Tree 15:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -954,14 +995,10 @@ Cost of transformed tree 15: 97654571
 Transformed Tree 16:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -974,16 +1011,20 @@ Transformed Tree 16:
           Attribute: c.course_id
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: c.course_id
       ⋈-join
         AS w
           Relation: workers
         AS c
           Relation: course
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
+            Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
@@ -994,19 +1035,15 @@ Transformed Tree 16:
         AS t
           Relation: teaches
 
-Cost of transformed tree 16: 34890001
+Cost of transformed tree 16: 59502021
 
 Transformed Tree 17:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1019,21 +1056,27 @@ Transformed Tree 17:
           Attribute: c.course_id
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: c.course_id
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: c.course_id
       ⋈-join
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
         π-Project ()
           Attribute: c.credits
-            Attribute: c.course_id
+            Attribute: c.title
+              Attribute: c.course_id
           AS c
             Relation: course
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
+            Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
@@ -1044,19 +1087,15 @@ Transformed Tree 17:
         AS t
           Relation: teaches
 
-Cost of transformed tree 17: 34886100
+Cost of transformed tree 17: 59499330
 
 Transformed Tree 18:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1087,14 +1126,10 @@ Cost of transformed tree 18: 57708529
 Transformed Tree 19:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1125,14 +1160,10 @@ Cost of transformed tree 19: 30172979
 Transformed Tree 20:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1140,8 +1171,11 @@ Transformed Tree 20:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       σ-Select[]
         Comparison: =
           Attribute: i.ID
@@ -1160,23 +1194,20 @@ Transformed Tree 20:
             Relation: workers
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 20: 5473594
+Cost of transformed tree 20: 11982165
 
 Transformed Tree 21:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1184,8 +1215,11 @@ Transformed Tree 21:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
@@ -1204,23 +1238,20 @@ Transformed Tree 21:
           Relation: workers
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 21: 14027
+Cost of transformed tree 21: 17021
 
 Transformed Tree 22:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1228,16 +1259,21 @@ Transformed Tree 22:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: w.ID
         π-Project ()
-          Attribute: i.ID
-            Attribute: t.course_id
+          Attribute: i.salary
+            Attribute: i.name
+              Attribute: i.ID
+                Attribute: t.course_id
           ⋈-join
             Condition:
               Comparison: =
@@ -1248,28 +1284,26 @@ Transformed Tree 22:
             AS t
               Relation: teaches
         π-Project ()
-          Attribute: w.ID
+          Attribute: w.age
+            Attribute: w.ID
           AS w
             Relation: workers
     π-Project ()
       Attribute: c.credits
-        Attribute: c.course_id
+        Attribute: c.title
+          Attribute: c.course_id
       AS c
         Relation: course
 
-Cost of transformed tree 22: 7598
+Cost of transformed tree 22: 10665028
 
 Transformed Tree 23:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1300,14 +1334,10 @@ Cost of transformed tree 23: 13220702861
 Transformed Tree 24:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1338,14 +1368,10 @@ Cost of transformed tree 24: 19783202901
 Transformed Tree 25:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1357,13 +1383,17 @@ Transformed Tree 25:
           Attribute: i.ID
           Attribute: t.ID
     π-Project ()
-      Attribute: i.ID
+      Attribute: i.salary
+        Attribute: i.name
+          Attribute: i.ID
       AS i
         Relation: instructor
     π-Project ()
       Attribute: c.credits
-        Attribute: w.ID
-          Attribute: t.ID
+        Attribute: c.title
+          Attribute: w.age
+            Attribute: w.ID
+              Attribute: t.ID
       σ-Select[]
         Comparison: =
           Attribute: t.course_id
@@ -1377,20 +1407,16 @@ Transformed Tree 25:
           AS t
             Relation: teaches
 
-Cost of transformed tree 25: 14679033529
+Cost of transformed tree 25: 15681639458
 ---------------------------------------------------------------------------------------------------
 
 Optimized Tree:
 π-Project ()
   Attribute: c.credits
-    AS course_title
-      Attribute: c.title
-      AS worker_age
-        Attribute: w.age
-        AS instructor_salary
-          Attribute: i.salary
-          AS instructor_name
-            Attribute: i.name
+    Attribute: c.title
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
             Attribute: i.ID
   ⋈-join
     Condition:
@@ -1398,16 +1424,64 @@ Optimized Tree:
         Attribute: t.course_id
         Attribute: c.course_id
     π-Project ()
-      Attribute: i.ID
-        Attribute: t.course_id
+      Attribute: w.age
+        Attribute: i.salary
+          Attribute: i.name
+            Attribute: i.ID
+              Attribute: t.course_id
       ⋈-join
         Condition:
           Comparison: =
             Attribute: i.ID
             Attribute: w.ID
-        π-Project ()
-          Attribute: i.ID
-            Attribute: t.course_id
+        ⋈-join
+          Condition:
+            Comparison: =
+              Attribute: i.ID
+              Attribute: t.ID
+          AS i
+            Relation: instructor
+          AS t
+            Relation: teaches
+        AS w
+          Relation: workers
+    π-Project ()
+      Attribute: c.credits
+        Attribute: c.title
+          Attribute: c.course_id
+      AS c
+        Relation: course
+
+Cost of Optimized tree 21: 17021
+=================================================================================================
+
+Original Relational Algebra Tree for sql statement 2:
+π-Project ()
+  Attribute: w.age
+    Attribute: w.salary
+      Attribute: ici.credits
+        Attribute: ici.course_title
+          Attribute: ici.course_id
+            Attribute: ici.dept_name
+              Attribute: ici.instructor_salary
+                Attribute: ici.instructor_name
+                  Attribute: ici.ID
+  WITH
+    AS InstructorCourseInfo
+      π-Project ()
+        Attribute: c.credits
+          Attribute: c.title
+            Attribute: t.sec_id
+              Attribute: t.course_id
+                Attribute: i.dept_name
+                  Attribute: i.salary
+                    Attribute: i.name
+                      Attribute: i.ID
+        ⋈-join
+          Condition:
+            Comparison: =
+              Attribute: t.course_id
+              Attribute: c.course_id
           ⋈-join
             Condition:
               Comparison: =
@@ -1417,15 +1491,17 @@ Optimized Tree:
               Relation: instructor
             AS t
               Relation: teaches
-        π-Project ()
+          AS c
+            Relation: course
+    ⋈-join
+      Condition:
+        Comparison: =
+          Attribute: ici.ID
           Attribute: w.ID
-          AS w
-            Relation: workers
-    π-Project ()
-      Attribute: c.credits
-        Attribute: c.course_id
-      AS c
-        Relation: course
+      AS w
+        Relation: workers
+      AS ici
+        Relation: InstructorCourseInfo
 
-Cost of Optimized tree 22: 7598
+Cost of actual tree: 17222
 ```
