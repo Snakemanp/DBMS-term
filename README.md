@@ -14,7 +14,7 @@
 - **Jayanth Reddy**  
   [GitHub: jayanthdvv](https://github.com/jayanthdvv)
 
-## 👥 Mentor and Evaluator
+## 👨‍🏫 Mentor and Evaluator
 - **Utsav Basu**  
   [GitHub: PhoenixKing2501](https://github.com/PhoenixKing2501)
 ---
