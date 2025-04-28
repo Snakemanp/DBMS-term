@@ -7,11 +7,16 @@
 - **Preetham Battula**
 - **Sumith Chandra**  
   [GitHub: sumith2425](https://github.com/sumith2425)
-- **Sathvik Pratapgiri**
+- **Sathvik Pratapgiri**  
+  [GitHub: sathvik2k5](https://github.com/sathvik2k5)
 - **Kasyap Kovvuru**  
   [GitHub: kovvurukasyap](https://github.com/kovvurukasyap)
-- **Jayanth Reddy**
+- **Jayanth Reddy**  
+  [GitHub: jayanthdvv](https://github.com/jayanthdvv)
 
+## 👥 Mentor and Evaluator
+- **Utsav Basu**  
+  [GitHub: PhoenixKing2501](https://github.com/PhoenixKing2501)
 ---
 
 ## 📚 Course Details
